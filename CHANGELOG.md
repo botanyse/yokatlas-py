@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1
+
+### Fixed
+
+- Associate-degree searches (`birim_turu_id=47`) no longer crash: the API sends `birimTuruAdi: "ÖNLISANS"` (Turkish dotted Ö), now normalized to the ASCII canonical `"ONLISANS"`. ([#5](https://github.com/saidsurucu/yokatlas-py/issues/5))
+- Foundation vocational schools no longer crash: `universiteTuru: "VAKIF MYO"` is now an accepted value alongside `"DEVLET"` and `"VAKIF"`. ([#6](https://github.com/saidsurucu/yokatlas-py/issues/6))
+
 ## 0.6.0
 
 **BREAKING — Major rewrite.**

@@ -181,7 +181,7 @@ class Program(BaseModel):
     birim_grup_id: int | None = None
     birim_grup_adi: str | None = None
     birim_turu_id: int | None = None
-    birim_turu_adi: Literal["LISANS", "ONLISANS"]
+    birim_turu_adi: Literal["LISANS", "ONLISANS"]  # 'ÖNLISANS' normalized → 'ONLISANS'
 
     ogrenim_turu_id: int | None = None
     ogrenim_turu_adi: str | None = None
@@ -197,7 +197,7 @@ class Program(BaseModel):
     il_adi: str | None = None
     ilce_kodu: int | None = None
     ilce_adi: str | None = None
-    universite_turu: Literal["DEVLET", "VAKIF"]
+    universite_turu: Literal["DEVLET", "VAKIF", "VAKIF MYO"]
 
     # Yearly snapshots
     current: YearlyStats
@@ -211,13 +211,20 @@ class Program(BaseModel):
         if "current" in data and "history" in data:
             return data  # already structured
 
+        data = dict(data)
+
+        # The API sends "ÖNLISANS" (Turkish dotted Ö); normalize to the ASCII
+        # canonical value the model exposes. Accepts either key spelling.
+        for key in ("birimTuruAdi", "birim_turu_adi"):
+            if data.get(key) == "ÖNLISANS":
+                data[key] = "ONLISANS"
+
         current_year = data.get("yil") or data.get("year") or 0
         try:
             current_year = int(current_year)
         except (TypeError, ValueError):
             current_year = 0
 
-        data = dict(data)
         data["current"] = _build_yearly_stats(data, "", current_year)
         history: list[YearlyStats] = []
         for offset in (1, 2, 3):

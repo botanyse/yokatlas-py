@@ -58,6 +58,20 @@ def test_yearly_stats_handles_missing_fields() -> None:
     assert all(h.kontenjan is None for h in program.history)
 
 
+def test_program_normalizes_onlisans_turkish_spelling() -> None:
+    # API returns "ÖNLISANS" (Turkish dotted Ö) for associate programs (issue #5).
+    raw = {**SAMPLE_PROGRAM_RAW, "birimTuruAdi": "ÖNLISANS"}
+    program = Program.model_validate(raw)
+    assert program.birim_turu_adi == "ONLISANS"
+
+
+def test_program_accepts_vakif_myo_university_type() -> None:
+    # Foundation vocational schools report "VAKIF MYO" (issue #6).
+    raw = {**SAMPLE_PROGRAM_RAW, "universiteTuru": "VAKIF MYO"}
+    program = Program.model_validate(raw)
+    assert program.universite_turu == "VAKIF MYO"
+
+
 def test_search_page_validates_spring_payload() -> None:
     page = SearchPage[Program].model_validate(make_search_response([SAMPLE_PROGRAM_RAW], total=1, size=10))
     assert page.total_elements == 1
