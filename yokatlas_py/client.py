@@ -262,6 +262,22 @@ class AsyncYokAtlasClient:
         raw = await self._http.post_json(_SEARCH_PATH, json_body=body)
         return SearchPage[Program].model_validate(raw)
 
+    async def search_netler(
+        self,
+        filters: NetFilters | dict[str, Any] | None = None,
+        *,
+        page: int = 0,
+        size: int = 20,
+        smart_search: bool = True,
+    ) -> SearchPage[Net]:
+        f = _coerce_net_filters(filters)
+        if smart_search and any((f.universite, f.program)):
+            await self._ensure_lookups()
+            f = _resolve_net_smart_fields(f, self._lookups)
+        body = _build_net_request(f, page=page, size=size)
+        raw = await self._http.post_json(_NETLER_SEARCH_PATH, json_body=body)
+        return SearchPage[Net].model_validate(raw)
+
     async def get_program(self, kilavuz_kodu: int | str) -> Program | None:
         try:
             code = int(kilavuz_kodu)
