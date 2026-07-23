@@ -29,6 +29,12 @@ Yeni bir istemci oluşturur. `settings` verilmezse default ayarlar (env var over
 
 Arama yapar. `filters` `SearchFilters`, `dict` veya `None` olabilir. Akıllı string alanları (`universite`, `program`, `il`) `smart_search=True` iken çözülür.
 
+#### `search_netler(filters=None, *, page=0, size=20, smart_search=True) -> SearchPage[Net]`
+
+Net Sihirbazı'nı (son yerleşen kişinin netleri) arar. `filters` `NetFilters`, `dict` veya `None` olabilir. `universite`/`program` `smart_search=True` iken tekil ID'ye çözülür; `program` verilip `puan_turu` verilmemişse çözülen program grubunun `puan_turu`'sü otomatik kullanılır.
+
+> Hem `universite_id` hem `birim_grup_id` birlikte verilip `yil` verilmezse, o programın son 3 yılının (yıl, taban puan, netler) geçmişi döner — "Son Kişinin Net Verileri" görünümüyle birebir aynı.
+
 #### `get_program(kilavuz_kodu: int | str) -> Program | None`
 
 Tek bir programı ÖSYM kılavuz kodu ile döndürür. Bulunamazsa `None`. `kilavuz_kodu` int'e çevrilemiyorsa `ValueError`.
@@ -60,6 +66,7 @@ from yokatlas_py import AsyncYokAtlasClient
 async with AsyncYokAtlasClient() as client:
     page = await client.search(...)
     prog = await client.get_program(102210277)
+    nets = await client.search_netler(NetFilters(universite="boğaziçi", program="bilgisayar mühendisliği"))
 ```
 
 Lookup verileri ilk çağrıda **paralel** çekilir (`asyncio.gather`).
@@ -105,6 +112,26 @@ YÖK Atlas search endpoint'inden dönen tek bir kayıt. Yıllık veriler (konten
 | `min_puan` | `float \| None` | Taban puan |
 | `basari_sirasi` | `int \| None` | Başarı sırası |
 
+### `Net`
+
+Net Sihirbazı endpoint'inden dönen tek bir kayıt — son yerleşen kişinin netleri.
+
+| Alan | Tip | Açıklama |
+|---|---|---|
+| `yil` | `int` | Sınav/yerleşme yılı |
+| `kilavuz_kodu` | `int` | ÖSYM kılavuz kodu |
+| `puan_turu` | `str` | SAY / SÖZ / EA / DİL / TYT |
+| `katsayi` | `float \| None` | |
+| `taban_puan` | `float \| None` | Son yerleşenin puanı |
+| `obp` | `float \| None` | Orta öğretim başarı puanı |
+| `tyt_trk_net`, `tyt_sos_net`, `tyt_mat_net`, `tyt_fen_net` | `float \| None` | TYT netleri (her puan türünde var) |
+| `ayt_mat_net`, `ayt_fiz_net`, `ayt_kim_net`, `ayt_bio_net` | `float \| None` | SAY netleri |
+| `ayt_tde_net`, `ayt_trh1_net`, `ayt_cog1_net`, `ayt_trh2_net`, `ayt_cog2_net`, `ayt_fel_net`, `ayt_din_net` | `float \| None` | SÖZ netleri (EA bir alt kümesini kullanır) |
+| `ydt_ydil_net` | `float \| None` | DİL neti |
+| `universite_id` / `universite_adi`, `birim_grup_id` / `birim_grup_adi`, `birim_id` / `birim_adi` | — | `Program` ile aynı ID uzayı |
+| `birim_turu_adi` | `"LISANS" \| "ONLISANS"` | |
+| `universite_turu` | `"DEVLET" \| "VAKIF" \| "VAKIF MYO"` | |
+
 ### `SearchPage[T]`
 
 Spring `Page<T>` ile birebir. Alanlar: `content, total_elements, total_pages, size, number, first, last, number_of_elements, empty, yil`.
@@ -141,6 +168,22 @@ Tüm alanlar opsiyoneldir; verilmeyenler API'a gönderilmez.
 #### `to_payload() -> dict`
 
 API'ye gönderilen camelCase payload'u üretir (smart alanlar düşer; sadece ID alanları kalır).
+
+### `NetFilters`
+
+`SearchFilters` ile aynı desende, ancak `universite_id`/`birim_grup_id` **tekil** (liste değil) — endpoint liste kabul etmiyor.
+
+| Alan | Tip | Notlar |
+|---|---|---|
+| `puan_turu` | `PuanTuru \| None` | |
+| `universite_id` | `int \| None` | Doğrudan ID (tekil) |
+| `birim_grup_id` | `int \| None` | Doğrudan ID (tekil) |
+| `birim_turu_id` | `int \| None` | 46 = LİSANS, 47 = ÖNLİSANS |
+| `universite_turu` | `"DEVLET" \| "VAKIF" \| None` | |
+| `yil` | `int \| None` | Belirtilmezse: tek program+üniversite sorgusu son 3 yılı, geniş sorgu son yılı döner |
+| `katsayi` | `float \| None` | UI'da yok, nadiren gerekir |
+| **`universite`** | `str \| None` | Akıllı — `universite_id` ile birlikte verilemez |
+| **`program`** | `str \| None` | Akıllı — `birim_grup_id` ile birlikte verilemez; verilirse ve `puan_turu` boşsa otomatik doldurulur |
 
 ---
 
@@ -204,7 +247,7 @@ cities = list_cities()
 
 ## Endpoint eşlemesi (referans)
 
-Bu kütüphane sadece 4 resmi endpoint'i sarar:
+Bu kütüphane sadece 5 resmi endpoint'i sarar:
 
 | Endpoint | Metod | Kullanım |
 |---|---|---|
@@ -212,3 +255,4 @@ Bu kütüphane sadece 4 resmi endpoint'i sarar:
 | `/api/tercih-kilavuz/universiteler` | GET | `list_universities()` |
 | `/api/tercih-kilavuz/universite-programlar` | GET | `list_program_groups()` |
 | `/api/tercih-kilavuz/universite-iller` | GET | `list_cities()` |
+| `/api/netler/search` | POST | `search_netler()` |

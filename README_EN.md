@@ -15,6 +15,7 @@ A modern, type-safe Python client for the YÖK Atlas tercih kılavuzu JSON API.
 - **One client**: `YokAtlasClient` (sync) and `AsyncYokAtlasClient` (async) with the same surface.
 - **4 years in one shot**: Each program ships with current-year + 3 prior years of min score, success rank, quota/placement, and academic staff counts.
 - **Smart search**: Free-form `universite="boğaziçi"`, `program="bilgisayar"`, `il="ankara"` resolve to IDs via fuzzy matching with Turkish-aware normalization.
+- **Net Sihirbazı**: `search_netler()` returns the last-placed candidate's TYT/AYT/YDT net counts per year.
 - **Pydantic v2 models**: Full type safety, IDE auto-complete, runtime validation.
 - **No HTML parsing**: Pure JSON; no `beautifulsoup4` dependency.
 
@@ -46,6 +47,19 @@ with YokAtlasClient() as client:
     if prog:
         for stats in prog.all_years:
             print(stats.year, stats.min_puan, stats.basari_sirasi)
+```
+
+### Net Sihirbazı (last-placed candidate's exam nets)
+
+```python
+from yokatlas_py import YokAtlasClient, NetFilters
+
+with YokAtlasClient() as client:
+    page = client.search_netler(
+        NetFilters(universite="boğaziçi", program="bilgisayar mühendisliği"),
+    )
+    for net in page.content:
+        print(net.yil, net.tyt_mat_net, net.ayt_fiz_net)
 ```
 
 ### Async

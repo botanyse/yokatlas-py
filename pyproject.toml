@@ -1,6 +1,6 @@
 [project]
 name = "yokatlas-py"
-version = "0.6.1"
+version = "0.7.0"
 description = "Python client for the YÖK Atlas tercih kılavuzu JSON API"
 readme = "README.md"
 requires-python = ">=3.10"

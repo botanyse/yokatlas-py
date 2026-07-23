@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0
+
+### Added
+
+- **Net Sihirbazı support**: `search_netler()` (sync + async) and the module-level `search_netler()` convenience wrap YÖK Atlas's new `/api/netler/search` endpoint — the last-placed candidate's exam net counts (TYT/AYT/YDT subtest nets) per program/university/year ("son yerleşen kişinin netleri").
+- `Net` and `NetFilters` pydantic models. `NetFilters` supports the same smart (name→id) search as `SearchFilters` — `universite`/`program` resolve via the existing lookup cache, with `program` also defaulting `puan_turu` from the matched program group.
+- `SearchPage[T]` gained an optional `source` field (present on netler responses).
+
 ## 0.6.1
 
 ### Fixed

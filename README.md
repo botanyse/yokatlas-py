@@ -15,6 +15,7 @@ YÖK Atlas tercih kılavuzu JSON API'si için modern, tip güvenli Python istemc
 - **Tek istemci**: `YokAtlasClient` (sync) ve `AsyncYokAtlasClient` (async) — aynı arayüz.
 - **Tek seferde 4 yıllık veri**: Her program, mevcut yıl + 3 önceki yılın taban puanı, başarı sırası, kontenjan/yerleşen sayıları, akademik kadro bilgileri ile döner.
 - **Akıllı arama**: `universite="boğaziçi"`, `program="bilgisayar"`, `il="ankara"` gibi serbest yazımlar fuzzy match ile ID'ye dönüşür (Türkçe karakter normalizasyonu dahil).
+- **Net Sihirbazı**: `search_netler()` ile son yerleşen kişinin TYT/AYT/YDT netlerini (yıl bazında) sorgula.
 - **Pydantic v2 modeller**: Tam tip güvenliği, IDE auto-complete, runtime doğrulama.
 - **Sıfır HTML parsing**: Tüm veri JSON, `beautifulsoup4` bağımlılığı yok.
 
@@ -52,6 +53,20 @@ with YokAtlasClient() as client:
     if prog:
         for stats in prog.all_years:
             print(f"{stats.year}: {stats.min_puan} / {stats.basari_sirasi}")
+```
+
+### Net Sihirbazı (son yerleşen kişinin netleri)
+
+```python
+from yokatlas_py import YokAtlasClient, NetFilters
+
+with YokAtlasClient() as client:
+    # Belirli bir programın son 3 yıllık net geçmişi
+    page = client.search_netler(
+        NetFilters(universite="boğaziçi", program="bilgisayar mühendisliği"),
+    )
+    for net in page.content:
+        print(f"{net.yil}: TYT Mat {net.tyt_mat_net} / AYT Fizik {net.ayt_fiz_net}")
 ```
 
 ### Async kullanım
