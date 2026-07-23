@@ -94,6 +94,51 @@ def make_search_response(items: list[dict[str, Any]] | None = None, *, total: in
     }
 
 
+SAMPLE_NET_ROW: dict[str, Any] = {
+    "yil": 2025,
+    "kilavuzKodu": 102210277,
+    "puanTuru": "SAY",
+    "katsayi": 0.12,
+    "tabanPuan": 533.05003,
+    "obp": 473.958,
+    "tytTrkNet": 33.75,
+    "tytSosNet": 16.25,
+    "tytMatNet": 38.75,
+    "tytFenNet": 20.0,
+    "aytMatNet": 38.75,
+    "aytFizNet": 12.75,
+    "aytKimNet": 11.75,
+    "aytBioNet": 13.0,
+    "universiteId": 173500,
+    "universiteAdi": "BOĞAZİÇİ ÜNİVERSİTESİ",
+    "birimGrupId": 4001,
+    "birimGrupAdi": "Bilgisayar Mühendisliği",
+    "birimId": 150153,
+    "birimAdi": "Bilgisayar Mühendisliği (İngilizce)",
+    "birimTuruId": 46,
+    "birimTuruAdi": "LISANS",
+    "universiteTuru": "DEVLET",
+}
+
+
+def make_net_search_response(items: list[dict[str, Any]] | None = None, *, total: int | None = None, size: int = 20, page: int = 0) -> dict[str, Any]:
+    items = items if items is not None else [SAMPLE_NET_ROW]
+    total = total if total is not None else len(items)
+    total_pages = max(1, (total + size - 1) // size) if size else 1
+    return {
+        "content": items,
+        "empty": len(items) == 0,
+        "first": page == 0,
+        "last": page >= total_pages - 1,
+        "number": page,
+        "numberOfElements": len(items),
+        "size": size,
+        "totalElements": total,
+        "totalPages": total_pages,
+        "source": "snapshot",
+    }
+
+
 SAMPLE_UNIVERSITIES = [
     {"universiteId": 173496, "universiteAdi": "İSTANBUL MEDENİYET ÜNİVERSİTESİ"},
     {"universiteId": 173500, "universiteAdi": "BOĞAZİÇİ ÜNİVERSİTESİ"},

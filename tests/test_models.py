@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from yokatlas_py.models import Program, SearchFilters, SearchPage, YearlyStats
+from yokatlas_py.models import Net, NetFilters, Program, SearchFilters, SearchPage, YearlyStats
 
-from .conftest import SAMPLE_PROGRAM_RAW, make_search_response
+from .conftest import SAMPLE_NET_ROW, SAMPLE_PROGRAM_RAW, make_net_search_response, make_search_response
 
 
 def test_program_groups_yearly_into_current_and_history() -> None:
@@ -117,3 +117,65 @@ def test_search_filters_rejects_smart_id_collision() -> None:
 def test_search_filters_rejects_unknown_fields() -> None:
     with pytest.raises(ValueError):
         SearchFilters.model_validate({"unknown_field": 1})
+
+
+def test_net_model_parses_say_fields() -> None:
+    net = Net.model_validate(SAMPLE_NET_ROW)
+    assert net.kilavuz_kodu == 102210277
+    assert net.universite_adi == "BOĞAZİÇİ ÜNİVERSİTESİ"
+    assert net.birim_turu_adi == "LISANS"
+    assert net.ayt_fiz_net == pytest.approx(12.75)
+    assert net.ayt_tde_net is None  # SAY rows don't carry SÖZ-only fields
+
+
+def test_net_model_normalizes_onlisans_turkish_spelling() -> None:
+    raw = {**SAMPLE_NET_ROW, "birimTuruAdi": "ÖNLISANS"}
+    net = Net.model_validate(raw)
+    assert net.birim_turu_adi == "ONLISANS"
+
+
+def test_net_page_validates_source_field() -> None:
+    page = SearchPage[Net].model_validate(make_net_search_response([SAMPLE_NET_ROW], total=1, size=10))
+    assert page.source == "snapshot"
+    assert page.content[0].kilavuz_kodu == 102210277
+
+
+def test_net_filters_payload_camel_case_and_defaults() -> None:
+    payload = NetFilters().to_payload()
+    assert payload == {
+        "puanTuru": None,
+        "universiteId": None,
+        "birimGrupId": None,
+        "birimTuruId": None,
+        "universiteTuru": None,
+        "yil": None,
+        "katsayi": None,
+    }
+
+
+def test_net_filters_serializes_yil_as_string() -> None:
+    assert NetFilters(yil=2025).to_payload()["yil"] == "2025"
+
+
+def test_net_filters_normalizes_puan_turu_aliases() -> None:
+    assert NetFilters(puan_turu="SÖZ").to_payload()["puanTuru"] == "SÖZ"
+
+
+def test_net_filters_rejects_smart_id_collision() -> None:
+    with pytest.raises(ValueError, match="universite/universite_id"):
+        NetFilters(universite="boğaziçi", universite_id=1)
+    with pytest.raises(ValueError, match="program/birim_grup_id"):
+        NetFilters(program="bilgisayar", birim_grup_id=1)
+
+
+def test_net_filters_rejects_unknown_fields() -> None:
+    with pytest.raises(ValueError):
+        NetFilters.model_validate({"unknown_field": 1})
+
+
+def test_net_types_are_exported_from_package_root() -> None:
+    import yokatlas_py
+
+    assert yokatlas_py.Net is Net
+    assert yokatlas_py.NetFilters is NetFilters
+    assert callable(yokatlas_py.search_netler)

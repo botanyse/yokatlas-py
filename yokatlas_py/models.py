@@ -128,6 +128,15 @@ _YEARLY_FIELD_TYPES = {
 }
 
 
+def _normalize_onlisans_spelling(data: dict[str, Any]) -> dict[str, Any]:
+    """The API sends "ÖNLISANS" (Turkish dotted Ö); normalize to the ASCII
+    canonical value the models expose. Accepts either key spelling."""
+    for key in ("birimTuruAdi", "birim_turu_adi"):
+        if data.get(key) == "ÖNLISANS":
+            data[key] = "ONLISANS"
+    return data
+
+
 def _build_yearly_stats(data: dict[str, Any], suffix: str, year: int) -> YearlyStats:
     raw: dict[str, Any] = {"year": year}
     for camel, snake in _FLAT_TO_YEARLY.items():
@@ -211,13 +220,7 @@ class Program(BaseModel):
         if "current" in data and "history" in data:
             return data  # already structured
 
-        data = dict(data)
-
-        # The API sends "ÖNLISANS" (Turkish dotted Ö); normalize to the ASCII
-        # canonical value the model exposes. Accepts either key spelling.
-        for key in ("birimTuruAdi", "birim_turu_adi"):
-            if data.get(key) == "ÖNLISANS":
-                data[key] = "ONLISANS"
+        data = _normalize_onlisans_spelling(dict(data))
 
         current_year = data.get("yil") or data.get("year") or 0
         try:
@@ -237,6 +240,63 @@ class Program(BaseModel):
     def all_years(self) -> list[YearlyStats]:
         """Current year first, followed by historical years (newest → oldest)."""
         return [self.current, *self.history]
+
+
+class Net(BaseModel):
+    """A single Net Sihirbazı result row — the last-placed candidate's exam
+    net counts for one program/university/year (``/api/netler/search``).
+
+    Which ``*_net`` fields are populated depends on :attr:`puan_turu`: TYT
+    fields are always present; SAY adds ``ayt_mat/fiz/kim/bio_net``; SÖZ adds
+    ``ayt_tde/trh1/cog1/trh2/cog2/fel/din_net``; EA adds a subset of both;
+    DİL adds ``ydt_ydil_net``.
+    """
+
+    model_config = _model_config()
+
+    yil: int
+    kilavuz_kodu: int
+    puan_turu: str
+    katsayi: float | None = None
+    taban_puan: float | None = None
+    obp: float | None = None
+
+    tyt_trk_net: float | None = None
+    tyt_sos_net: float | None = None
+    tyt_mat_net: float | None = None
+    tyt_fen_net: float | None = None
+
+    ayt_mat_net: float | None = None
+    ayt_fiz_net: float | None = None
+    ayt_kim_net: float | None = None
+    ayt_bio_net: float | None = None
+
+    ayt_tde_net: float | None = None
+    ayt_trh1_net: float | None = None
+    ayt_cog1_net: float | None = None
+    ayt_trh2_net: float | None = None
+    ayt_cog2_net: float | None = None
+    ayt_fel_net: float | None = None
+    ayt_din_net: float | None = None
+
+    ydt_ydil_net: float | None = None
+
+    universite_id: int
+    universite_adi: str
+    birim_grup_id: int | None = None
+    birim_grup_adi: str | None = None
+    birim_id: int | None = None
+    birim_adi: str
+    birim_turu_id: int | None = None
+    birim_turu_adi: Literal["LISANS", "ONLISANS"]
+    universite_turu: Literal["DEVLET", "VAKIF", "VAKIF MYO"]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_birim_turu(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        return _normalize_onlisans_spelling(dict(data))
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +319,7 @@ class SearchPage(BaseModel, Generic[T]):
     number_of_elements: int
     empty: bool
     yil: int | None = None
+    source: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -333,8 +394,58 @@ class SearchFilters(BaseModel):
         return {"SOZ": "SÖZ", "DIL": "DİL"}.get(upper, upper)
 
 
+class NetFilters(BaseModel):
+    """Filters accepted by :class:`yokatlas_py.client.YokAtlasClient.search_netler`
+    (the Net Sihirbazı / "son yerleşen kişinin netleri" endpoint).
+
+    Unlike :class:`SearchFilters`, ``universite_id``/``birim_grup_id`` are
+    *singular* — the underlying API does not accept lists for this endpoint.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    puan_turu: PuanTuru | None = None
+    universite_id: int | None = None
+    birim_grup_id: int | None = None
+    birim_turu_id: int | None = None
+    universite_turu: Literal["DEVLET", "VAKIF"] | None = None
+    yil: int | None = None
+    katsayi: float | None = None
+
+    # Smart (string) filters — resolved when smart_search=True
+    universite: str | None = None
+    program: str | None = None
+
+    @model_validator(mode="after")
+    def _no_smart_id_collision(self) -> "NetFilters":
+        clashes: list[str] = []
+        if self.universite is not None and self.universite_id is not None:
+            clashes.append("universite/universite_id")
+        if self.program is not None and self.birim_grup_id is not None:
+            clashes.append("program/birim_grup_id")
+        if clashes:
+            raise ValueError(
+                "Smart filter and ID filter cannot be set together: " + ", ".join(clashes)
+            )
+        return self
+
+    def to_payload(self) -> dict[str, Any]:
+        """Render the filter object as the API expects (camelCase, singular IDs)."""
+        return {
+            "puanTuru": SearchFilters._normalize_puan_turu(self.puan_turu),
+            "universiteId": self.universite_id,
+            "birimGrupId": self.birim_grup_id,
+            "birimTuruId": self.birim_turu_id,
+            "universiteTuru": self.universite_turu,
+            "yil": str(self.yil) if self.yil is not None else None,
+            "katsayi": self.katsayi,
+        }
+
+
 __all__ = [
     "City",
+    "Net",
+    "NetFilters",
     "Program",
     "ProgramGroup",
     "PuanTuru",
