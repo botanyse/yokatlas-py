@@ -9,6 +9,7 @@ from .client import (
     list_cities,
     list_program_groups,
     list_universities,
+    search_netler,
     search_programs,
 )
 from .config import Settings, settings
@@ -21,6 +22,8 @@ from .exceptions import (
 )
 from .models import (
     City,
+    Net,
+    NetFilters,
     Program,
     ProgramGroup,
     PuanTuru,
@@ -41,9 +44,12 @@ __all__ = [
     "list_cities",
     "list_program_groups",
     "list_universities",
+    "search_netler",
     "search_programs",
     # Models
     "City",
+    "Net",
+    "NetFilters",
     "Program",
     "ProgramGroup",
     "PuanTuru",
