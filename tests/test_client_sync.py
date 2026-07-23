@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from yokatlas_py.client import YokAtlasClient
+from yokatlas_py._lookup import LookupCache
+from yokatlas_py.client import YokAtlasClient, _resolve_net_smart_fields
 from yokatlas_py.exceptions import LookupError
-from yokatlas_py.models import SearchFilters
+from yokatlas_py.models import NetFilters, SearchFilters
 
 
 def test_search_returns_search_page(client: YokAtlasClient) -> None:
@@ -75,3 +76,69 @@ def test_filters_dict_input_is_accepted(client: YokAtlasClient) -> None:
 def test_close_is_idempotent(client: YokAtlasClient) -> None:
     client.close()
     client.close()
+
+
+def test_search_netler_broad_returns_page(client: YokAtlasClient) -> None:
+    page = client.search_netler(NetFilters(puan_turu="SAY"))
+    assert page.total_elements >= 1
+    assert page.content[0].puan_turu == "SAY"
+    assert page.source == "snapshot"
+
+
+def test_search_netler_detail_returns_three_year_history(client: YokAtlasClient) -> None:
+    page = client.search_netler(NetFilters(universite_id=173500, birim_grup_id=4001))
+    assert page.total_elements == 3
+    assert sorted(row.yil for row in page.content) == [2023, 2024, 2025]
+
+
+def test_search_netler_smart_search_resolves_string_to_id(client: YokAtlasClient) -> None:
+    f = NetFilters(universite="boğaziçi", program="bilgisayar mühendisliği")
+    page = client.search_netler(f, smart_search=True)
+    assert page is not None
+
+
+def test_search_netler_smart_search_unknown_university_raises(client: YokAtlasClient) -> None:
+    f = NetFilters(universite="zzzzzzzzzz")
+    with pytest.raises(LookupError):
+        client.search_netler(f, smart_search=True)
+
+
+def test_search_netler_dict_input_is_accepted(client: YokAtlasClient) -> None:
+    page = client.search_netler({"puan_turu": "SAY"}, size=5)
+    assert page.size == 5
+
+
+def test_resolve_net_smart_fields_resolves_university_and_program() -> None:
+    cache = LookupCache(ttl=60)
+    cache.populate(
+        universities=[{"universiteId": 173500, "universiteAdi": "BOĞAZİÇİ ÜNİVERSİTESİ"}],
+        program_groups=[{"birimGrupId": 4001, "birimGrupAdi": "Bilgisayar Mühendisliği", "puanTuru": "SAY"}],
+        cities=[],
+    )
+    resolved = _resolve_net_smart_fields(NetFilters(universite="boğaziçi", program="bilgisayar mühendisliği"), cache)
+    assert resolved.universite_id == 173500
+    assert resolved.universite is None
+    assert resolved.birim_grup_id == 4001
+    assert resolved.program is None
+
+
+def test_resolve_net_smart_fields_defaults_puan_turu_from_program() -> None:
+    cache = LookupCache(ttl=60)
+    cache.populate(
+        universities=[],
+        program_groups=[{"birimGrupId": 4001, "birimGrupAdi": "Bilgisayar Mühendisliği", "puanTuru": "SAY"}],
+        cities=[],
+    )
+    resolved = _resolve_net_smart_fields(NetFilters(program="bilgisayar mühendisliği"), cache)
+    assert resolved.puan_turu == "SAY"
+
+
+def test_resolve_net_smart_fields_keeps_explicit_puan_turu() -> None:
+    cache = LookupCache(ttl=60)
+    cache.populate(
+        universities=[],
+        program_groups=[{"birimGrupId": 4001, "birimGrupAdi": "Bilgisayar Mühendisliği", "puanTuru": "SAY"}],
+        cities=[],
+    )
+    resolved = _resolve_net_smart_fields(NetFilters(program="bilgisayar mühendisliği", puan_turu="EA"), cache)
+    assert resolved.puan_turu == "EA"

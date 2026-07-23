@@ -9,12 +9,13 @@ from typing import Any
 from ._lookup import LookupCache
 from .config import Settings, settings as default_settings
 from .http_client import AsyncHttpClient, HttpClient
-from .models import City, Program, ProgramGroup, SearchFilters, SearchPage, University
+from .models import City, Net, NetFilters, Program, ProgramGroup, SearchFilters, SearchPage, University
 
 _SEARCH_PATH = "/api/tercih-kilavuz/search"
 _UNIVERSITIES_PATH = "/api/tercih-kilavuz/universiteler"
 _PROGRAMS_PATH = "/api/tercih-kilavuz/universite-programlar"
 _CITIES_PATH = "/api/tercih-kilavuz/universite-iller"
+_NETLER_SEARCH_PATH = "/api/netler/search"
 
 
 # ---------------------------------------------------------------------------
@@ -68,6 +69,47 @@ def _resolve_smart_fields(filters: SearchFilters, cache: LookupCache) -> SearchF
     return SearchFilters.model_validate(data)
 
 
+def _coerce_net_filters(value: NetFilters | dict[str, Any] | None) -> NetFilters:
+    if value is None:
+        return NetFilters()
+    if isinstance(value, NetFilters):
+        return value
+    return NetFilters.model_validate(value)
+
+
+def _build_net_request(filters: NetFilters, *, page: int, size: int) -> dict[str, Any]:
+    return {
+        "filters": filters.to_payload(),
+        "page": int(page),
+        "size": int(size),
+    }
+
+
+def _resolve_net_smart_fields(filters: NetFilters, cache: LookupCache) -> NetFilters:
+    """Replace string filters (universite/program) with their ID counterparts.
+
+    Unlike :func:`_resolve_smart_fields`, both fields are singular (the
+    netler endpoint does not accept lists). Resolving ``program`` also
+    defaults ``puan_turu`` from the matched :class:`ProgramGroup` when the
+    caller didn't set one explicitly, mirroring what the Net Sihirbazı UI
+    does when a program is chosen.
+    """
+    if not any((filters.universite, filters.program)):
+        return filters
+
+    data = filters.model_dump()
+    if filters.universite is not None:
+        data["universite_id"] = cache.resolve_university(filters.universite).universite_id
+        data["universite"] = None
+    if filters.program is not None:
+        resolved_program = cache.resolve_program(filters.program)
+        data["birim_grup_id"] = resolved_program.birim_grup_id
+        data["program"] = None
+        if filters.puan_turu is None:
+            data["puan_turu"] = resolved_program.puan_turu
+    return NetFilters.model_validate(data)
+
+
 # ---------------------------------------------------------------------------
 # Sync client
 # ---------------------------------------------------------------------------
@@ -117,6 +159,23 @@ class YokAtlasClient:
         body = _build_request(f, page=page, size=size, sort_by=sort_by, direction=direction)
         raw = self._http.post_json(_SEARCH_PATH, json_body=body)
         return SearchPage[Program].model_validate(raw)
+
+    def search_netler(
+        self,
+        filters: NetFilters | dict[str, Any] | None = None,
+        *,
+        page: int = 0,
+        size: int = 20,
+        smart_search: bool = True,
+    ) -> SearchPage[Net]:
+        """Search the Net Sihirbazı (son yerleşen kişinin netleri)."""
+        f = _coerce_net_filters(filters)
+        if smart_search and any((f.universite, f.program)):
+            self._ensure_lookups()
+            f = _resolve_net_smart_fields(f, self._lookups)
+        body = _build_net_request(f, page=page, size=size)
+        raw = self._http.post_json(_NETLER_SEARCH_PATH, json_body=body)
+        return SearchPage[Net].model_validate(raw)
 
     def get_program(self, kilavuz_kodu: int | str) -> Program | None:
         """Return a single program by its ÖSYM kılavuz kodu, or ``None`` if not found."""
@@ -276,6 +335,22 @@ def search_programs(
     )
 
 
+def search_netler(
+    filters: NetFilters | dict[str, Any] | None = None,
+    *,
+    page: int = 0,
+    size: int = 20,
+    smart_search: bool = True,
+) -> SearchPage[Net]:
+    """Convenience wrapper around :meth:`YokAtlasClient.search_netler` using a process-wide client."""
+    return _get_default_client().search_netler(
+        filters,
+        page=page,
+        size=size,
+        smart_search=smart_search,
+    )
+
+
 def get_program(kilavuz_kodu: int | str) -> Program | None:
     return _get_default_client().get_program(kilavuz_kodu)
 
@@ -299,5 +374,6 @@ __all__ = [
     "list_cities",
     "list_program_groups",
     "list_universities",
+    "search_netler",
     "search_programs",
 ]

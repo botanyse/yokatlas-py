@@ -183,6 +183,25 @@ def _mock_handler(request: httpx.Request) -> httpx.Response:
                 return httpx.Response(200, json=make_search_response([SAMPLE_PROGRAM_RAW], total=1, size=payload.get("size", 20)))
             return httpx.Response(200, json=make_search_response([], total=0, size=payload.get("size", 20)))
         return httpx.Response(200, json=make_search_response(size=payload.get("size", 20), page=payload.get("page", 0)))
+    if path == "/api/netler/search":
+        import json as _json
+        body = request.content
+        try:
+            payload = _json.loads(body) if body else {}
+        except Exception:
+            payload = {}
+        filters = payload.get("filters") or {}
+        size = payload.get("size", 20)
+        page = payload.get("page", 0)
+        universite_id = filters.get("universiteId")
+        birim_grup_id = filters.get("birimGrupId")
+        yil = filters.get("yil")
+        if universite_id and birim_grup_id and not yil:
+            # "detail" view: one specific program at one specific university
+            # returns the last 3 years of history (mirrors the real API).
+            rows = [{**SAMPLE_NET_ROW, "yil": y} for y in (2025, 2024, 2023)]
+            return httpx.Response(200, json=make_net_search_response(rows, total=len(rows), size=size, page=page))
+        return httpx.Response(200, json=make_net_search_response(size=size, page=page))
     return httpx.Response(404, json={"error": "not found", "path": path})
 
 
