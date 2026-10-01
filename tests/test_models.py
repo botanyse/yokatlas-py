@@ -179,3 +179,24 @@ def test_net_types_are_exported_from_package_root() -> None:
     assert yokatlas_py.Net is Net
     assert yokatlas_py.NetFilters is NetFilters
     assert callable(yokatlas_py.search_netler)
+
+def test_program_accepts_kktc_university_type() -> None:
+    raw = {**SAMPLE_PROGRAM_RAW, "universiteTuru": "KKTC"}
+    program = Program.model_validate(raw)
+    assert program.universite_turu == "KKTC"
+
+
+def test_net_accepts_kktc_university_type() -> None:
+    raw = {**SAMPLE_NET_ROW, "universiteTuru": "KKTC"}
+    net = Net.model_validate(raw)
+    assert net.universite_turu == "KKTC"
+
+
+def test_search_filters_accepts_kktc_university_type() -> None:
+    filters = SearchFilters(universite_turu="KKTC")
+    assert filters.to_payload()["universiteTuru"] == "KKTC"
+
+
+def test_net_filters_accepts_kktc_university_type() -> None:
+    filters = NetFilters(universite_turu="KKTC")
+    assert filters.to_payload()["universiteTuru"] == "KKTC"

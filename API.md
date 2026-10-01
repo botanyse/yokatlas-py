@@ -87,7 +87,7 @@ YÖK Atlas search endpoint'inden dönen tek bir kayıt. Yıllık veriler (konten
 | `birim_id`, `birim_adi`, `birim_grup_id`, `birim_grup_adi` | — | Program / birim grubu |
 | `birim_turu_adi` | `"LISANS" \| "ONLISANS"` | |
 | `puan_turu` | `str` | SAY / SÖZ / EA / DİL / TYT |
-| `universite_turu` | `"DEVLET" \| "VAKIF"` | |
+| `universite_turu` | `"DEVLET" \| "VAKIF" \| "KKTC"` | |
 | `burs_orani_id` / `burs_orani_adi` | `int \| None` / `str \| None` | Burs durumu |
 | `ogrenim_turu_id` / `ogrenim_turu_adi` | — | Örgün vb. |
 | `ogrenim_dili_id` / `ogrenim_dili_adi` | — | Türkçe / İngilizce vb. |
@@ -130,7 +130,7 @@ Net Sihirbazı endpoint'inden dönen tek bir kayıt — son yerleşen kişinin n
 | `ydt_ydil_net` | `float \| None` | DİL neti |
 | `universite_id` / `universite_adi`, `birim_grup_id` / `birim_grup_adi`, `birim_id` / `birim_adi` | — | `Program` ile aynı ID uzayı |
 | `birim_turu_adi` | `"LISANS" \| "ONLISANS"` | |
-| `universite_turu` | `"DEVLET" \| "VAKIF" \| "VAKIF MYO"` | |
+| `universite_turu` | `"DEVLET" \| "VAKIF" \| "VAKIF MYO" \| "KKTC"` | |
 
 ### `SearchPage[T]`
 
@@ -155,7 +155,7 @@ Tüm alanlar opsiyoneldir; verilmeyenler API'a gönderilmez.
 | `birim_grup_id` | `list[int] \| None` | Doğrudan ID |
 | `il_kodu` | `list[int] \| None` | Doğrudan ID |
 | `birim_turu_id` | `int \| None` | 46 = LİSANS, 47 = ÖNLİSANS |
-| `universite_turu` | `"DEVLET" \| "VAKIF" \| None` | |
+| `universite_turu` | `"DEVLET" \| "VAKIF" \| "KKTC" \| None` | |
 | `burs_orani_id`, `ogrenim_turu_id` | `int \| None` | |
 | `kilavuz_kodu` | `int \| None` | Tek programa filtre |
 | `min_basari_sirasi`, `max_basari_sirasi` | `int \| None` | Aralık |
@@ -179,7 +179,7 @@ API'ye gönderilen camelCase payload'u üretir (smart alanlar düşer; sadece ID
 | `universite_id` | `int \| None` | Doğrudan ID (tekil) |
 | `birim_grup_id` | `int \| None` | Doğrudan ID (tekil) |
 | `birim_turu_id` | `int \| None` | 46 = LİSANS, 47 = ÖNLİSANS |
-| `universite_turu` | `"DEVLET" \| "VAKIF" \| None` | |
+| `universite_turu` | `"DEVLET" \| "VAKIF" \| "KKTC" \| None` | |
 | `yil` | `int \| None` | Belirtilmezse: tek program+üniversite sorgusu son 3 yılı, geniş sorgu son yılı döner |
 | `katsayi` | `float \| None` | UI'da yok, nadiren gerekir |
 | **`universite`** | `str \| None` | Akıllı — `universite_id` ile birlikte verilemez |

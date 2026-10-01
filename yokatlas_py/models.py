@@ -206,7 +206,7 @@ class Program(BaseModel):
     il_adi: str | None = None
     ilce_kodu: int | None = None
     ilce_adi: str | None = None
-    universite_turu: Literal["DEVLET", "VAKIF", "VAKIF MYO"]
+    universite_turu: Literal["DEVLET", "VAKIF", "VAKIF MYO", "KKTC"]
 
     # Yearly snapshots
     current: YearlyStats
@@ -289,7 +289,7 @@ class Net(BaseModel):
     birim_adi: str
     birim_turu_id: int | None = None
     birim_turu_adi: Literal["LISANS", "ONLISANS"]
-    universite_turu: Literal["DEVLET", "VAKIF", "VAKIF MYO"]
+    universite_turu: Literal["DEVLET", "VAKIF", "VAKIF MYO", "KKTC"]
 
     @model_validator(mode="before")
     @classmethod
@@ -343,7 +343,7 @@ class SearchFilters(BaseModel):
     birim_grup_id: list[int] | None = None
     il_kodu: list[int] | None = None
     birim_turu_id: int | None = None
-    universite_turu: Literal["DEVLET", "VAKIF"] | None = None
+    universite_turu: Literal["DEVLET", "VAKIF", "KKTC"] | None = None
     burs_orani_id: int | None = None
     ogrenim_turu_id: int | None = None
     kilavuz_kodu: int | None = None
@@ -408,7 +408,7 @@ class NetFilters(BaseModel):
     universite_id: int | None = None
     birim_grup_id: int | None = None
     birim_turu_id: int | None = None
-    universite_turu: Literal["DEVLET", "VAKIF"] | None = None
+    universite_turu: Literal["DEVLET", "VAKIF", "KKTC"] | None = None
     yil: int | None = None
     katsayi: float | None = None
 

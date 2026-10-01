@@ -105,7 +105,7 @@ unis = list_universities()  # 221 üniversite
 | `program` / `birim_grup_id` | `str \| list[str]` / `list[int]` | Program grubu |
 | `il` / `il_kodu` | `str \| list[str]` / `list[int]` | İl |
 | `birim_turu_id` | `int` | 46 = LİSANS, 47 = ÖNLİSANS |
-| `universite_turu` | `"DEVLET" \| "VAKIF"` | Üniversite türü |
+| `universite_turu` | `"DEVLET" \| "VAKIF" \| "KKTC"` | Üniversite türü |
 | `burs_orani_id` | `int` | 0 = Ücretsiz / Burslu |
 | `ogrenim_turu_id` | `int` | Örgün/İkinci öğretim |
 | `kilavuzKodu` | `int` | Tek programa filtre |
